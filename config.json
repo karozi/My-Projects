@@ -1,0 +1,19 @@
+{
+  "keywords": [
+    "builder",
+    "founder",
+    "product",
+    "design",
+    "ai"
+  ],
+  "rate_limit_delay": 2.0,
+  "max_profiles": 100,
+  "output_dir": "results",
+  "discovery_sources": {
+    "explore_page": true,
+    "recommendations": true,
+    "leaderboard": true
+  },
+  "case_sensitive": false,
+  "export_formats": ["json", "csv"]
+}

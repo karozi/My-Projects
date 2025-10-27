@@ -1,0 +1,18 @@
+# Sample Substack URLs to check
+# One URL per line, remove # to enable
+
+# Tech/Product newsletters
+https://lenny.substack.com
+https://digitalnative.substack.com
+https://diff.substack.com
+https://every.to
+
+# Design-focused
+https://www.designlife.club
+https://growth.design
+
+# AI/Tech
+https://www.aisnakeoil.com
+https://www.exponentialview.co
+
+# Add your own URLs below:
