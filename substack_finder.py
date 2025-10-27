@@ -42,7 +42,17 @@ class SubstackProfileFinder:
         # Session for requests
         self.session = requests.Session()
         self.session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'DNT': '1',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'document',
+            'Sec-Fetch-Mode': 'navigate',
+            'Sec-Fetch-Site': 'none',
+            'Cache-Control': 'max-age=0'
         })
 
     def _rate_limit_sleep(self):
@@ -64,61 +74,75 @@ class SubstackProfileFinder:
 
         return matched
 
-    def _extract_profile_data(self, url: str) -> Optional[Dict]:
+    def _extract_profile_data(self, url: str, max_retries: int = 3) -> Optional[Dict]:
         """Extract profile data from a Substack publication URL."""
-        try:
-            self._rate_limit_sleep()
-            response = self.session.get(url, timeout=10)
-            response.raise_for_status()
+        last_error = None
 
-            soup = BeautifulSoup(response.text, 'html.parser')
+        for attempt in range(max_retries):
+            try:
+                self._rate_limit_sleep()
 
-            # Extract various data points
-            profile_data = {
-                'url': url,
-                'handle': self._extract_handle(url),
-                'name': None,
-                'bio': None,
-                'subscribers': None,
-                'profile_image': None,
-                'discovered_at': datetime.now().isoformat(),
-                'matched_keywords': []
-            }
+                # Add random delay for retries
+                if attempt > 0:
+                    retry_delay = 2 ** attempt  # Exponential backoff
+                    time.sleep(retry_delay)
 
-            # Try to find author name
-            name_elem = soup.find('meta', property='og:site_name')
-            if name_elem:
-                profile_data['name'] = name_elem.get('content', '').strip()
+                response = self.session.get(url, timeout=15, allow_redirects=True)
+                response.raise_for_status()
 
-            # Try to find description/bio
-            desc_elem = soup.find('meta', property='og:description')
-            if desc_elem:
-                profile_data['bio'] = desc_elem.get('content', '').strip()
+                soup = BeautifulSoup(response.text, 'html.parser')
 
-            # Also check for meta description
-            if not profile_data['bio']:
-                meta_desc = soup.find('meta', attrs={'name': 'description'})
-                if meta_desc:
-                    profile_data['bio'] = meta_desc.get('content', '').strip()
+                # Extract various data points
+                profile_data = {
+                    'url': url,
+                    'handle': self._extract_handle(url),
+                    'name': None,
+                    'bio': None,
+                    'subscribers': None,
+                    'profile_image': None,
+                    'discovered_at': datetime.now().isoformat(),
+                    'matched_keywords': []
+                }
 
-            # Try to find profile image
-            image_elem = soup.find('meta', property='og:image')
-            if image_elem:
-                profile_data['profile_image'] = image_elem.get('content', '')
+                # Try to find author name
+                name_elem = soup.find('meta', property='og:site_name')
+                if name_elem:
+                    profile_data['name'] = name_elem.get('content', '').strip()
 
-            # Look for subscriber count (if visible)
-            # This varies by Substack's HTML structure
-            subscriber_text = soup.find(string=re.compile(r'subscribers?', re.I))
-            if subscriber_text:
-                numbers = re.findall(r'\d+[,\d]*', subscriber_text)
-                if numbers:
-                    profile_data['subscribers'] = numbers[0].replace(',', '')
+                # Try to find description/bio
+                desc_elem = soup.find('meta', property='og:description')
+                if desc_elem:
+                    profile_data['bio'] = desc_elem.get('content', '').strip()
 
-            return profile_data
+                # Also check for meta description
+                if not profile_data['bio']:
+                    meta_desc = soup.find('meta', attrs={'name': 'description'})
+                    if meta_desc:
+                        profile_data['bio'] = meta_desc.get('content', '').strip()
 
-        except Exception as e:
-            print(f"Error extracting profile from {url}: {e}")
-            return None
+                # Try to find profile image
+                image_elem = soup.find('meta', property='og:image')
+                if image_elem:
+                    profile_data['profile_image'] = image_elem.get('content', '')
+
+                # Look for subscriber count (if visible)
+                # This varies by Substack's HTML structure
+                subscriber_text = soup.find(string=re.compile(r'subscribers?', re.I))
+                if subscriber_text:
+                    numbers = re.findall(r'\d+[,\d]*', subscriber_text)
+                    if numbers:
+                        profile_data['subscribers'] = numbers[0].replace(',', '')
+
+                return profile_data  # Success
+
+            except Exception as e:
+                last_error = e
+                if attempt == max_retries - 1:
+                    # Last attempt failed
+                    print(f"Error extracting profile from {url} after {max_retries} attempts: {e}")
+                # Continue to next retry
+
+        return None  # All retries failed
 
     def _extract_handle(self, url: str) -> str:
         """Extract handle from Substack URL."""

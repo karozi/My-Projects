@@ -15,30 +15,35 @@ pip install -r requirements.txt
 
 ## Quick Test
 
-### Option 1: Test with Sample URLs (Recommended First Test)
+### Option 1: Demo Mode (Recommended First Test)
 
 ```bash
-# Check a few known tech/product Substacks
-python substack_finder.py --urls https://lenny.substack.com https://digitalnative.substack.com
+# Run with mock data to see how the tool works
+python demo_substack_finder.py
 ```
 
 Expected output:
-- Script will scan the provided URLs
-- Extract bios and check for keywords
-- Display matches in real-time
-- Export results to `results/` directory
+- Processes 6 demo profiles
+- Matches keywords in bios
+- Shows results in terminal
+- Exports to JSON and CSV in `results/` directory
 
-### Option 2: Auto-Discovery Mode
+This is the best way to understand the tool's functionality!
 
-```bash
-# Discover profiles from Substack's explore pages
-python substack_finder.py
+### Option 2: Use Your Own URL List
+
+Create a file `my_urls.txt`:
+```
+https://example1.substack.com
+https://example2.substack.com
 ```
 
-This will take longer (5-10 minutes) as it:
-- Scans multiple category pages
-- Checks the leaderboard
-- Processes all discovered URLs
+Then run:
+```bash
+python substack_finder.py --urls-file my_urls.txt
+```
+
+**Note:** Due to Substack's bot protection, some URLs may return 403 errors. See [REAL_WORLD_USAGE.md](REAL_WORLD_USAGE.md) for strategies to work around this.
 
 ### Option 3: Use Sample URLs File
 
